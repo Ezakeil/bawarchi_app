@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/voice_helper.dart';
+import '../../../auth/presentation/providers/user_provider.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -41,7 +43,7 @@ class HomeScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header (FR3.1)
-              _buildHeader(),
+              _buildHeader(context),
               const SizedBox(height: 32),
 
               // Pantry Overview Card (FR3.2)
@@ -63,13 +65,15 @@ class HomeScreen extends StatelessWidget {
   }
 
   // Header Widget (FR3.1)
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     final greeting = _getGreeting();
+    final userName = Provider.of<UserProvider>(context).userName ?? 'Chef';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Good $greeting, Aisha',
+          'Good $greeting, $userName',
           style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,

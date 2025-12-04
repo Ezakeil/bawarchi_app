@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "31778048316",
+    "project_id": "bawarchi-813df",
+    "storage_bucket": "bawarchi-813df.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:31778048316:android:ae6c6fe8612151b7f1f639",
+        "android_client_info": {
+          "package_name": "com.example.bawarchiApp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBwMyxe0HZ2imnJ5UILIkBMASzoXONufpo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:31778048316:android:4b37f23fe58b4132f1f639",
+        "android_client_info": {
+          "package_name": "com.example.bawarchi_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBwMyxe0HZ2imnJ5UILIkBMASzoXONufpo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

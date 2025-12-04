@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../data/auth_repository.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -11,11 +12,12 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  bool isLogin = true;
   bool obscurePassword = true;
+  bool isLoading = false;
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final AuthRepository _authRepository = AuthRepository();
 
   @override
   void dispose() {
@@ -47,16 +49,34 @@ class _LoginScreenState extends State<LoginScreen> {
     return null;
   }
 
-  void _handleAuthAction() {
+  Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      if (isLogin) {
-        // Sign In - navigate to preferences (onboarding)
-        context.go('/preferences');
-      } else {
-        // Sign Up - show message (TODO: implement full signup flow)
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account creation feature coming soon')),
+      setState(() {
+        isLoading = true;
+      });
+
+      try {
+        print('[LoginScreen] Starting login');
+        await _authRepository.signInWithEmailAndPassword(
+          _emailController.text.trim(),
+          _passwordController.text.trim(),
         );
+        print('[LoginScreen] Login complete, navigating to /home');
+        if (mounted) {
+          context.go('/home');
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
       }
     }
   }
@@ -65,7 +85,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        // Background with LinearGradient (FR1)
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -80,40 +99,24 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Header Section
                   _buildHeader(),
                   const SizedBox(height: 40),
-
-                  // Toggle Section (FR1.1)
-                  _buildToggle(),
-                  const SizedBox(height: 32),
-
-                  // Form Section
                   Form(
                     key: _formKey,
                     child: Column(
                       children: [
-                        // Email Field (FR1.2)
                         _buildEmailField(),
                         const SizedBox(height: 20),
-
-                        // Password Field (FR1.4)
                         _buildPasswordField(),
                         const SizedBox(height: 24),
-
-                        // Action Button (FR1.6)
-                        _buildActionButton(),
+                        _buildLoginButton(),
                       ],
                     ),
                   ),
                   const SizedBox(height: 32),
-
-                  // Social Login Section (FR1.7)
                   _buildSocialLogin(),
                   const SizedBox(height: 24),
-
-                  // Footer Text
-                  _buildFooterText(),
+                  _buildSignupLink(),
                 ],
               ),
             ),
@@ -123,11 +126,9 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Header with Icon and Title
   Widget _buildHeader() {
     return Column(
       children: [
-        // Icon
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -148,16 +149,12 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         const SizedBox(height: 20),
-
-        // Title
         Text(
           'Welcome to Bawarchi',
           style: Theme.of(context).textTheme.headlineMedium,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),
-
-        // Subtitle
         Text(
           'Sign in to start your culinary journey',
           style: Theme.of(
@@ -166,91 +163,6 @@ class _LoginScreenState extends State<LoginScreen> {
           textAlign: TextAlign.center,
         ),
       ],
-    );
-  }
-
-  // Toggle between Login and Sign Up (FR1.1)
-  Widget _buildToggle() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      padding: const EdgeInsets.all(4),
-      child: Row(
-        children: [
-          // Login Button
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  isLogin = true;
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: isLogin ? Colors.white : Colors.transparent,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: isLogin
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : [],
-                ),
-                child: Text(
-                  'Login',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: isLogin ? AppColors.primaryAmber : Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // Sign Up Button
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  isLogin = false;
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: !isLogin ? Colors.white : Colors.transparent,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: !isLogin
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : [],
-                ),
-                child: Text(
-                  'Sign Up',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: !isLogin ? AppColors.primaryAmber : Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -291,18 +203,27 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Action Button (FR1.6)
-  Widget _buildActionButton() {
+  // Login Button (FR1.6)
+  Widget _buildLoginButton() {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _handleAuthAction,
-        child: Text(
-          isLogin ? 'Sign In' : 'Sign Up',
-          style: Theme.of(
-            context,
-          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
-        ),
+        onPressed: isLoading ? null : _handleLogin,
+        child: isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.textCharcoal,
+                ),
+              )
+            : Text(
+                'Sign In',
+                style: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+              ),
       ),
     );
   }
@@ -353,7 +274,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(width: 12),
-
             // Phone Button
             Expanded(
               child: OutlinedButton(
@@ -392,35 +312,36 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Footer Text
-  Widget _buildFooterText() {
-    return RichText(
-      textAlign: TextAlign.center,
-      text: TextSpan(
-        children: [
-          TextSpan(
-            text: isLogin
-                ? "Don't have an account? "
-                : 'Already have an account? ',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.white.withOpacity(0.8),
+  // Signup Link
+  Widget _buildSignupLink() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          "Don't have an account? ",
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Colors.white.withOpacity(0.8),
+          ),
+        ),
+        GestureDetector(
+          onTap: () {
+            print('[LoginScreen] Sign Up tapped');
+            context.go('/signup');
+          },
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Text(
+              'Sign Up Now',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                decoration: TextDecoration.underline,
+              ),
             ),
           ),
-          TextSpan(
-            text: isLogin ? 'Sign Up' : 'Login',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-            recognizer: TapGestureRecognizer()
-              ..onTap = () {
-                setState(() {
-                  isLogin = !isLogin;
-                });
-              },
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

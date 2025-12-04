@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+python-multipart
+firebase-admin
+pydantic-settings
+python-dotenv
+requests
+numpy
+pillow
+httpx

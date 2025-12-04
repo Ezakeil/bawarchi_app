@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../data/preferences_repository.dart';
 import '../../../../core/constants/app_colors.dart';
 
 class PreferencesScreen extends StatefulWidget {
@@ -30,6 +31,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
   // Selection tracking
   int selectedDietaryIndex = 0; // "No Restriction" is default (FR2.2)
   int? selectedHealthGoalIndex;
+  final PreferencesRepository _preferencesRepository = PreferencesRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -282,17 +284,32 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
       return;
     }
 
-    // TODO: Save user preferences to backend/local storage
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Saved: ${dietaryOptions[selectedDietaryIndex]} + ${healthGoals[selectedHealthGoalIndex!]}',
-        ),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    final dietary = dietaryOptions[selectedDietaryIndex];
+    final goal = healthGoals[selectedHealthGoalIndex!];
 
-    // Navigate to home screen
-    context.go('/home');
+    () async {
+      try {
+        await _preferencesRepository.saveUserPreferences(
+          dietaryPreference: dietary,
+          healthGoal: goal,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Preferences saved: $dietary, $goal'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        context.go('/home');
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save preferences: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }();
   }
 }

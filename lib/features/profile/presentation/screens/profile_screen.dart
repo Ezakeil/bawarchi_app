@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../auth/data/auth_repository.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -13,15 +14,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Cooking Preferences State
   String selectedSpiceLevel = 'Medium';
   String selectedExpertise = 'Intermediate';
+  final AuthRepository _authRepository = AuthRepository();
 
   // Flavor Profile State
   Set<String> selectedFlavors = {'Savory', 'Tangy'};
 
-  // Mock User Data
-  final String userName = 'Aisha Khan';
-  final int recipesCooked = 48;
-  final int streakDays = 12;
-  final int savedItems = 24;
+  // User Data State
+  String userName = 'Loading...';
+  int recipesCooked = 0;
+  int streakDays = 0;
+  int savedItems = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    print('[ProfileScreen] initState called - Fetching user data');
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = _authRepository.currentUser;
+    if (user != null) {
+      final userData = await _authRepository.getUserData(user.uid);
+      if (userData != null && mounted) {
+        setState(() {
+          userName = userData.name;
+          // TODO: Fetch real stats
+          recipesCooked = 12; // Mock for now
+          streakDays = 5; // Mock for now
+          savedItems = 8; // Mock for now
+        });
+      }
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    try {
+      await _authRepository.signOut();
+      // Navigation is handled by AppRouter listening to auth state
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error signing out: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,12 +84,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // Flavor Profile Section (FR16.5)
                   _buildFlavorProfileSection(context),
                   const SizedBox(height: 32),
+                  
+                  // Logout Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _handleLogout,
+                      icon: const Icon(Icons.logout, color: Colors.red),
+                      label: Text(
+                        'Logout',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: Colors.red,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
 
             // Stats Bar (FR16.6)
             _buildStatsBar(context),
+            const SizedBox(height: 24),
           ],
         ),
       ),
