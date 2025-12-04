@@ -12,11 +12,13 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   bool obscurePassword = true;
+  bool obscureConfirmPassword = true;
   bool isLoading = false;
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
   final AuthRepository _authRepository = AuthRepository();
 
   @override
@@ -24,6 +26,7 @@ class _SignupScreenState extends State<SignupScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -49,8 +52,21 @@ class _SignupScreenState extends State<SignupScreen> {
     if (value == null || value.isEmpty) {
       return 'Please enter your password';
     }
-    if (value.length < 6) {
-      return 'Password must be at least 6 characters';
+    if (value.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+    if (!value.contains(RegExp(r'\d'))) {
+      return 'Password must contain at least one digit';
+    }
+    return null;
+  }
+
+  String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please confirm your password';
+    }
+    if (value != _passwordController.text) {
+      return 'Passwords do not match';
     }
     return null;
   }
@@ -117,6 +133,8 @@ class _SignupScreenState extends State<SignupScreen> {
                         _buildEmailField(),
                         const SizedBox(height: 20),
                         _buildPasswordField(),
+                        const SizedBox(height: 20),
+                        _buildConfirmPasswordField(),
                         const SizedBox(height: 24),
                         _buildSignupButton(),
                       ],
@@ -224,6 +242,31 @@ class _SignupScreenState extends State<SignupScreen> {
         fillColor: Colors.white.withOpacity(0.8),
       ),
       validator: _validatePassword,
+    );
+  }
+
+  Widget _buildConfirmPasswordField() {
+    return TextFormField(
+      controller: _confirmPasswordController,
+      obscureText: obscureConfirmPassword,
+      decoration: InputDecoration(
+        hintText: 'Confirm Password',
+        prefixIcon: const Icon(Icons.lock_outline),
+        suffixIcon: GestureDetector(
+          onTap: () {
+            setState(() {
+              obscureConfirmPassword = !obscureConfirmPassword;
+            });
+          },
+          child: Icon(
+            obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+          ),
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.8),
+      ),
+      validator: _validateConfirmPassword,
     );
   }
 
