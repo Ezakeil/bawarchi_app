@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../features/recipes/data/models/recipe_model.dart';
 
 class RecipeService {
-  final String _baseUrl = 'http://192.168.18.63:8000/api/v1/recipes/generate';
+  final String _baseUrl = 'http://192.168.0.199:8000/api/v1/recipes/generate';
 
   Future<List<Recipe>> fetchRecipesByIngredients(List<String> ingredients) async {
     try {

@@ -43,16 +43,22 @@ final GoRouter appRouter = GoRouter(
     }
 
     if (isLoggedIn) {
-      // If logged in and at login page, go to home
-      if (state.uri.toString() == '/login') {
-        print('[Router] Redirecting to /home (logged in)');
-        return '/home';
+      // Check if user has completed onboarding
+      final userData = await _authRepository.getUserData(user.uid);
+      final onboardingComplete = userData?.onboardingComplete ?? false;
+
+      if (!onboardingComplete) {
+        if (state.uri.toString() != '/preferences') {
+          print('[Router] Redirecting to /preferences (onboarding incomplete)');
+          return '/preferences';
+        }
+        return null;
       }
 
-      // If logged in and at signup page, go to preferences (onboarding)
-      if (state.uri.toString() == '/signup') {
-        print('[Router] Redirecting to /preferences (signup complete)');
-        return '/preferences';
+      // If logged in and onboarding complete, redirect away from auth pages
+      if (isLoggingIn || isSigningUp) {
+        print('[Router] Redirecting to /home (logged in & onboarding complete)');
+        return '/home';
       }
     }
 

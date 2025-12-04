@@ -1,7 +1,10 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/ui/auth_background.dart';
 import '../../data/auth_repository.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -11,59 +14,57 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+  bool isLogin = true;
   bool obscurePassword = true;
+  bool obscureConfirmPassword = true;
   bool isLoading = false;
+  
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
   final AuthRepository _authRepository = AuthRepository();
+  
+  late AnimationController _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _nameController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
-  // Email validation logic (FR1.2)
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your email';
-    }
-    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-    if (!emailRegex.hasMatch(value)) {
-      return 'Please enter a valid email';
-    }
-    return null;
-  }
-
-  // Password validation logic
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your password';
-    }
-    if (value.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
-    return null;
-  }
-
-  Future<void> _handleLogin() async {
+  Future<void> _submit() async {
     if (_formKey.currentState!.validate()) {
-      setState(() {
-        isLoading = true;
-      });
-
+      setState(() => isLoading = true);
       try {
-        print('[LoginScreen] Starting login');
-        await _authRepository.signInWithEmailAndPassword(
-          _emailController.text.trim(),
-          _passwordController.text.trim(),
-        );
-        print('[LoginScreen] Login complete, navigating to /home');
-        if (mounted) {
-          context.go('/home');
+        if (isLogin) {
+          await _authRepository.signInWithEmailAndPassword(
+            _emailController.text.trim(),
+            _passwordController.text.trim(),
+          );
+          if (mounted) context.go('/home');
+        } else {
+          await _authRepository.signUpWithEmailAndPassword(
+            _emailController.text.trim(),
+            _passwordController.text.trim(),
+            _nameController.text.trim(),
+          );
+          if (mounted) context.go('/preferences');
         }
       } catch (e) {
         if (mounted) {
@@ -72,276 +73,254 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } finally {
-        if (mounted) {
-          setState(() {
-            isLoading = false;
-          });
-        }
+        if (mounted) setState(() => isLoading = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [AppColors.primaryAmber, AppColors.backgroundCream],
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 40),
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        _buildEmailField(),
-                        const SizedBox(height: 20),
-                        _buildPasswordField(),
-                        const SizedBox(height: 24),
-                        _buildLoginButton(),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  _buildSocialLogin(),
-                  const SizedBox(height: 24),
-                  _buildSignupLink(),
-                ],
+    return AuthBackground(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Header
+              Icon(Icons.restaurant_menu, size: 64, color: AppColors.primaryAmber),
+              const SizedBox(height: 16),
+              Text(
+                isLogin ? 'Welcome Back' : 'Join Bawarchi',
+                style: GoogleFonts.poppins(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textCharcoal,
+                ),
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+              const SizedBox(height: 32),
 
-  Widget _buildHeader() {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+              // Split Card
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    // Toggle Switch
+                    Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: AppColors.backgroundCream,
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Stack(
+                        children: [
+                          AnimatedAlign(
+                            alignment: isLogin ? Alignment.centerLeft : Alignment.centerRight,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                            child: Container(
+                              width: MediaQuery.of(context).size.width * 0.4, // Approx half width
+                              margin: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(21),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => setState(() => isLogin = true),
+                                  child: Container(
+                                    color: Colors.transparent,
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      'Login',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: isLogin ? AppColors.textCharcoal : AppColors.textMuted,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => setState(() => isLogin = false),
+                                  child: Container(
+                                    color: Colors.transparent,
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      'Sign Up',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: !isLogin ? AppColors.textCharcoal : AppColors.textMuted,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Form
+                    Form(
+                      key: _formKey,
+                      child: AnimatedSize(
+                        duration: const Duration(milliseconds: 300),
+                        child: Column(
+                          children: [
+                            if (!isLogin) ...[
+                              _buildModernTextField(
+                                controller: _nameController,
+                                hint: 'Full Name',
+                                icon: Icons.person_outline,
+                                validator: (v) => v!.isEmpty ? 'Name required' : null,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            _buildModernTextField(
+                              controller: _emailController,
+                              hint: 'Email',
+                              icon: Icons.email_outlined,
+                              validator: (v) => !v!.contains('@') ? 'Invalid email' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildModernTextField(
+                              controller: _passwordController,
+                              hint: 'Password',
+                              icon: Icons.lock_outline,
+                              isPassword: true,
+                              validator: (v) {
+                                if (v == null || v.isEmpty) return 'Password required';
+                                if (v.length < 8) return 'Min 8 chars';
+                                if (!v.contains(RegExp(r'\d'))) return 'Must contain digit';
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            if (!isLogin) ...[
+                              _buildModernTextField(
+                                controller: _confirmPasswordController,
+                                hint: 'Confirm Password',
+                                icon: Icons.lock_outline,
+                                isPassword: true,
+                                isConfirmPassword: true,
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) return 'Confirm password';
+                                  if (v != _passwordController.text) return 'Mismatch';
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 24),
+                            ],
+                            
+                            // Submit Button
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: isLoading ? null : _submit,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryAmber,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: isLoading
+                                    ? const CircularProgressIndicator(color: Colors.white)
+                                    : Text(
+                                        isLogin ? 'Login' : 'Create Account',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          child: Icon(
-            Icons.restaurant_menu,
-            size: 60,
-            color: AppColors.textCharcoal,
-          ),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          'Welcome to Bawarchi',
-          style: Theme.of(context).textTheme.headlineMedium,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'Sign in to start your culinary journey',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  // Email Field (FR1.2)
-  Widget _buildEmailField() {
-    return TextFormField(
-      controller: _emailController,
-      keyboardType: TextInputType.emailAddress,
-      validator: _validateEmail,
-      decoration: InputDecoration(
-        hintText: 'your@email.com',
-        prefixIcon: const Icon(Icons.email_outlined),
-      ),
-    );
-  }
-
-  // Password Field (FR1.4)
-  Widget _buildPasswordField() {
-    return TextFormField(
-      controller: _passwordController,
-      obscureText: obscurePassword,
-      validator: _validatePassword,
-      decoration: InputDecoration(
-        hintText: 'Password',
-        prefixIcon: const Icon(Icons.lock_outlined),
-        suffixIcon: IconButton(
-          icon: Icon(
-            obscurePassword ? Icons.visibility_off : Icons.visibility,
-            color: AppColors.textMuted,
-          ),
-          onPressed: () {
-            setState(() {
-              obscurePassword = !obscurePassword;
-            });
-          },
         ),
       ),
     );
   }
 
-  // Login Button (FR1.6)
-  Widget _buildLoginButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : _handleLogin,
-        child: isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.textCharcoal,
+  Widget _buildModernTextField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool isPassword = false,
+    bool isConfirmPassword = false,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: isPassword && (isConfirmPassword ? obscureConfirmPassword : obscurePassword),
+      validator: validator,
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: Icon(icon, color: AppColors.textMuted),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  (isConfirmPassword ? obscureConfirmPassword : obscurePassword)
+                      ? Icons.visibility_off
+                      : Icons.visibility,
+                  color: AppColors.textMuted,
                 ),
+                onPressed: () => setState(() {
+                  if (isConfirmPassword) {
+                    obscureConfirmPassword = !obscureConfirmPassword;
+                  } else {
+                    obscurePassword = !obscurePassword;
+                  }
+                }),
               )
-            : Text(
-                'Sign In',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
-              ),
+            : null,
+        filled: true,
+        fillColor: const Color(0xFFF5F6FA),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.accentViolet, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 16),
       ),
-    );
-  }
-
-  // Social Login (FR1.7)
-  Widget _buildSocialLogin() {
-    return Column(
-      children: [
-        Text(
-          'Or continue with',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            // Google Button
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () {
-                  // TODO: Implement Google login
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Google login coming soon')),
-                  );
-                },
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.white, width: 2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.g_mobiledata, color: Colors.white),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Google',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Phone Button
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () {
-                  // TODO: Implement Phone login
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Phone login coming soon')),
-                  );
-                },
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.white, width: 2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.phone, color: Colors.white),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Phone',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // Signup Link
-  Widget _buildSignupLink() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          "Don't have an account? ",
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Colors.white.withOpacity(0.8),
-          ),
-        ),
-        GestureDetector(
-          onTap: () {
-            print('[LoginScreen] Sign Up tapped');
-            context.go('/signup');
-          },
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Text(
-              'Sign Up Now',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                decoration: TextDecoration.underline,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
+
